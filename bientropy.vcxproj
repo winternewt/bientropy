@@ -147,11 +147,14 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClCompile Include="bientropy.cpp" />
+    <ClCompile Include="test.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="bitent.h" />
     <ClInclude Include="bittwid.h" />
+    <ClInclude Include="bitent_cache.h" />
+    <ClInclude Include="bientropy.h" />
+    <ClInclude Include="bitent_types.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

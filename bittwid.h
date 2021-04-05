@@ -259,7 +259,7 @@ inline uint64_t pop64p(const uint64_t v) {
  */
 template <typename T>
 inline T popT(const T v) {
-    if constexpr (std::is_same_v<T, uint32_t> || std::is_same_v<T, uint64_t>) //intrinsics
+    if constexpr (std::is_same_v<T, uint32_t> || std::is_same_v<T, uint64_t>) //compile-time choice for intrinsics
         return pop(v);
     T c = v - ((v >> 1) & (T)~(T)0 / 3);                           // temp
     c = (c & (T)~(T)0 / 15 * 3) + ((c >> 2) & (T)~(T)0 / 15 * 3);      // temp
