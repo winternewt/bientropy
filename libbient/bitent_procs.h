@@ -1,10 +1,9 @@
-#ifndef BITENT_H
-#define BITENT_H
+#ifndef BITENT_PROCS_H
+#define BITENT_PROCS_H
 #pragma once
 
-#include <bitent_types.h>
 #include <math.h>
-#include <limits.h>     /* CHAR_BIT */
+#include <bitent_types.h>
 #include <bittwid.h> 
 
 /*
@@ -110,10 +109,10 @@ static const long double tbient_median[] = { 0, 0, 0.500000000000000000000000000
 static const long double phi = 1.6180339887498948482045868343656381L; //golden ration
 
 template <typename T>
-using f_cachecallback = bientropy (*)(const T, const uint_fast8_t, const uint_fast8_t, void*); //callback to retrieve from cache
+using f_cachecallback = bientropy (*)(const T, const uint_fast16_t, const uint_fast16_t, void*); //callback to retrieve from cache
 
 template <typename T>
-static bientropy __dummy(const T bits, const uint_fast8_t start, const uint_fast8_t stop, void* ctx){ //dummy callback for non-cached processing
+static bientropy __dummy(const T bits, const uint_fast16_t start, const uint_fast16_t stop, void* ctx){ //dummy callback for non-cached processing
 	bientropy dummy = { NAN };
 	if (stop == 1)
 		dummy = { 0. };
@@ -121,58 +120,58 @@ static bientropy __dummy(const T bits, const uint_fast8_t start, const uint_fast
 };
 
 template <typename T> 
-inline T trim_bitsT(const T bits, const uint_fast8_t length) {
+inline T trim_bitsT(const T bits, const uint_fast16_t length) {
 	T mask = (length >= sizeof(T) * CHAR_BIT) ? BIT_MASK(T, sizeof(T) * CHAR_BIT) : BIT_MASK(T, length);
 	return bits & mask;
 }
 
-inline uint32_t trim_bits(const uint32_t bits, const uint_fast8_t length) {
+inline uint32_t trim_bits(const uint32_t bits, const uint_fast16_t length) {
 	return trim_bitsT<uint32_t>(bits, length);
 }
 
-inline uint64_t trim_bits(const uint64_t bits, const uint_fast8_t length) {
+inline uint64_t trim_bits(const uint64_t bits, const uint_fast16_t length) {
 	return trim_bitsT<uint64_t>(bits, length);
 }
 
 template <typename T>
-inline T bin_derivT(const T bits, const uint_fast8_t length) { //https://journals.sagepub.com/doi/abs/10.1177/003754978905300307
+inline T bin_derivT(const T bits, const uint_fast16_t length) { //https://journals.sagepub.com/doi/abs/10.1177/003754978905300307
 	if (length < 2)
 		return trim_bitsT<T>(bits, length);
 	return trim_bitsT<T>((bits ^ (bits << 1)), length) >> 1;  // bits xor (bits shl 1) then remove excessive msb and lsb  
 }
 
-inline uint32_t bin_deriv(const uint32_t bits, const uint_fast8_t length) {
+inline uint32_t bin_deriv(const uint32_t bits, const uint_fast16_t length) {
 	return bin_derivT<uint32_t>(bits, length);
 }
 
-inline uint64_t bin_deriv(const uint64_t bits, const uint_fast8_t length) {
+inline uint64_t bin_deriv(const uint64_t bits, const uint_fast16_t length) {
 	return bin_derivT<uint64_t>(bits, length);
 }
 
 template <typename T>
-inline T bin_deriv_kT(const T bits, const uint_fast8_t length, const uint_fast8_t k) {
+inline T bin_deriv_kT(const T bits, const uint_fast16_t length, const uint_fast16_t k) {
 	return (k == 0 ? trim_bitsT<T>(bits, length) : bin_derivT<T>(bin_deriv_kT<T>(bits, length, k - 1), length)); // the kth binary derivative of length n-k where n is the length of the input
 }
 
-inline uint_fast32_t bin_deriv_k(const uint_fast32_t bits, const uint_fast8_t length, const uint_fast8_t k) {
+inline uint32_t bin_deriv_k(const uint32_t bits, const uint_fast16_t length, const uint_fast16_t k) {
 	return bin_deriv_kT<uint_fast32_t>(bits, length, k);
 }
 
-inline uint_fast64_t bin_deriv_k(const uint_fast64_t bits, const uint_fast8_t length, const uint_fast8_t k) {
-	return bin_deriv_kT<uint_fast64_t>(bits, length, k);
+inline uint64_t bin_deriv_k(const uint64_t bits, const uint_fast16_t length, const uint_fast16_t k) {
+	return bin_deriv_kT<uint64_t>(bits, length, k);
 }
 
 template <typename T>
-inline T bienTtoStepT(const T bits, bientropy* cache, const uint_fast8_t length, const uint_fast8_t stop, const uint_fast8_t offset) {
+inline T bienTtoStepT(const T bits, bientropy* cache, const uint_fast16_t length, const uint_fast16_t stop, const uint_fast16_t offset) {
 	if (length < 2 || stop < 1 || stop >= length || cache == NULL)
 		return bits;
 	T o, res = trim_bitsT<T>(bits, length);
 	FloatT p, e, g, l;
-	uint_fast8_t n = length;
+	uint_fast16_t n = length;
 	cache->t = 0.;
 	cache->bien = 0;
 	cache->tbien = 0;
-	for (uint_fast8_t k = 0; k < length - stop; ++k, --n) {
+	for (uint_fast16_t k = 0; k < length - stop; ++k, --n) {
 		o = popT<T>(res); // count of 0;
 		p = (FloatT)o / n;
 		e = (o == 0) ? 0 : -p * log2(p);
@@ -186,21 +185,21 @@ inline T bienTtoStepT(const T bits, bientropy* cache, const uint_fast8_t length,
 	return res;
 }
 
-uint64_t bienTtoStep(const uint64_t bits, bientropy* cache, const uint_fast8_t length, const uint_fast8_t stop, const uint_fast8_t offset) {
+uint64_t bienTtoStep(const uint64_t bits, bientropy* cache, const uint_fast16_t length, const uint_fast16_t stop, const uint_fast16_t offset) {
 	return bienTtoStepT<uint64_t>(bits, cache, length, stop, offset);
 }
 
-uint32_t bienTtoStep(const uint32_t bits, bientropy* cache, const uint_fast8_t length, const uint_fast8_t stop, const uint_fast8_t offset) {
+uint32_t bienTtoStep(const uint32_t bits, bientropy* cache, const uint_fast16_t length, const uint_fast16_t stop, const uint_fast16_t offset) {
 	return bienTtoStepT<uint32_t>(bits, cache, length, stop, offset);
 }
 
-bientropy bienTcache(const bientropy* cache, const bientropy* precalc, const uint_fast8_t length, const uint_fast8_t stop) {
-	bientropy res = { NAN };
+bientropy bienTcache(const bientropy* cache, const bientropy* precalc, const uint_fast16_t length, const uint_fast16_t stop) {
+	bientropy res = { NAN, NAN, NAN };
 	if (precalc == NULL || cache == NULL)
 		return res;
 	/*
 	res.t = cache->t; //cahced log sum
-	for (uint_fast8_t k = length - stop; k < length - 1; ++k) {
+	for (uint_fast16_t k = length - stop; k < length - 1; ++k) {
 		res.t += log2(2ULL + k); //continue summation
 	}*/
 	res.bien = (cache->bien + precalc->bien * (1ULL << (length-stop))) / ((1ULL << (length - 1ULL)) - 1ULL);	
@@ -210,7 +209,7 @@ bientropy bienTcache(const bientropy* cache, const bientropy* precalc, const uin
 }
 
 template <typename T>
-inline bientropy bienTcached(const T bits, const uint_fast8_t length, const uint_fast8_t stop, f_cachecallback<T> callback, void * ctx) {
+inline bientropy bienTcached(const T bits, const uint_fast16_t length, const uint_fast16_t stop, f_cachecallback<T> callback, void * ctx) {
 	bientropy cache;
 	if (length < 2 || stop < 1 || stop > length || callback == NULL)
 		return (cache = { NAN, NAN, NAN });
@@ -228,12 +227,12 @@ inline bientropy bienTcached(const T bits, const uint_fast8_t length, const uint
 
 
 template <typename T>
-inline bientropy bienTc(const T bits, const uint_fast8_t length) {
+inline bientropy bienTc(const T bits, const uint_fast16_t length) {
 	return bienTcached<T>(bits, length, 1, &__dummy<T>, NULL);
 }
 
 template <typename T>
-inline bientropy bienTs(const T bits, const uint_fast8_t length, const uint_fast8_t stop) {
+inline bientropy bienTs(const T bits, const uint_fast16_t length, const uint_fast16_t stop) {
 	bientropy cache, dummy;
 	cache = { NAN, NAN, NAN };
 	if (length < 2)
@@ -247,20 +246,20 @@ inline bientropy bienTs(const T bits, const uint_fast8_t length, const uint_fast
 
 
 template <typename T>
-inline bientropy bienT(const T bits, const uint_fast8_t length) {
+inline bientropy bienT(const T bits, const uint_fast16_t length) {
 	return bienTs<T>(bits, length, 1);
 }
 
 
-bientropy bien(const uint64_t bits, const uint_fast8_t length) {
+bientropy bien(const uint64_t bits, const uint_fast16_t length) {
 	return bienT<uint64_t>(bits,length);
 }
 
-bientropy bien(const uint32_t bits, const uint_fast8_t length) {
+bientropy bien(const uint32_t bits, const uint_fast16_t length) {
 	return bienT<uint32_t>(bits, length);
 }
 
-bientropy bien(const uint16_t bits, const uint_fast8_t length) {
+bientropy bien(const uint16_t bits, const uint_fast16_t length) {
 	return bienT<uint16_t>(bits, length);
 }
 
@@ -283,20 +282,20 @@ float geometricMean(int arr[], int n)
 	return exp(sum);
 }
 
-inline FloatT tbienMeanWeight_(const bientropy val, const uint_fast8_t length) {  //tbien divided between [0.5; 1] so that tbienWeight median is ~1 on any lentgth
+inline FloatT tbienMeanWeight_(const bientropy val, const uint_fast16_t length) {  //tbien divided between [0.5; 1] so that tbienWeight median is ~1 on any lentgth
 	if (length < 2 || length > 32)
 		return NAN;
 	return (1.0 + tbient_mean[length]  - val.tbien); // chaos [mean ;1.0) U order (1.0; 1.0 + mean] 
 }
 
 
-inline FloatT tbienMedianWeight_(const bientropy val, const uint_fast8_t length) {  //tbien divided between [0.5; 1] so that tbienWeight median is ~1 on any lentgth
+inline FloatT tbienMedianWeight_(const bientropy val, const uint_fast16_t length) {  //tbien divided between [0.5; 1] so that tbienWeight median is ~1 on any lentgth
 	if (length < 2 || length > 32)
 		return NAN;
 	return (1.0 + tbient_median[length] - val.tbien); // chaos [median ;1.0) U order (1.0; 1.0 + median] 
 }
 /*
-inline FloatT tbienGeomeanWeight(const bientropy val, const uint_fast8_t length) {  //tbien divided between [0.5; 1] so that tbienWeight median is ~1 on any lentgth
+inline FloatT tbienGeomeanWeight(const bientropy val, const uint_fast16_t length) {  //tbien divided between [0.5; 1] so that tbienWeight median is ~1 on any lentgth
 	if (length < 2 || length > 32)
 		return NAN;
 	FloatT res = val.tbien / (2 * tbient_gmean[length]); // chaos [0.5 ;1.0) U order (1.0; 1.5] 
@@ -304,7 +303,7 @@ inline FloatT tbienGeomeanWeight(const bientropy val, const uint_fast8_t length)
 }
 */
 
-inline FloatT tbienMeanWeight(const bientropy val, const uint_fast8_t length) {  //tbien divided between [0.5; 1] so that tbienWeight median is ~1 on any lentgth
+inline FloatT tbienMeanWeight(const bientropy val, const uint_fast16_t length) {  //tbien divided between [0.5; 1] so that tbienWeight median is ~1 on any lentgth
 	if (length < 2 || length > 32)
 		return NAN;
 	FloatT res = val.tbien / (tbient_mean[length]); // chaos [0.0 ;1.0) U order (1.0; 2.0] 
@@ -312,7 +311,7 @@ inline FloatT tbienMeanWeight(const bientropy val, const uint_fast8_t length) { 
 }
 
 
-inline FloatT tbienMedianWeight(const bientropy val, const uint_fast8_t length) {  //tbien divided between [0.5; 1] so that tbienWeight median is ~1 on any lentgth
+inline FloatT tbienMedianWeight(const bientropy val, const uint_fast16_t length) {  //tbien divided between [0.5; 1] so that tbienWeight median is ~1 on any lentgth
 	if (length < 2 || length > 32)
 		return NAN;
 	FloatT res = val.tbien/(tbient_median[length]); // chaos [0.5 ;1.0) U order (1.0; 2.0] 
@@ -320,6 +319,68 @@ inline FloatT tbienMedianWeight(const bientropy val, const uint_fast8_t length) 
 }
 
 
+inline uint_fast16_t cacheSize(const uint_fast16_t l) {
+	return (l < CACHE_MAX_LENGTH) ? l : CACHE_MAX_LENGTH;
+}
+
+template <typename T>
+inline  mapCacheIterator<T> cacheFind(const mapCache<T>* cacheMap, const T bits, const uint_fast16_t start, const uint_fast16_t stop) {
+	mapCacheIterator<T> index = cacheMap->find(Key<T>(bits, stop, start));
+	if (index == cacheMap->end()) {
+		index = cacheMap->find(Key<T>(trim_bitsT<T>(~bits, stop), stop, start)); //mirror has same entropy
+	}
+	return index;
+}
+
+template <typename T>
+static bientropy cache_callback(const T bits, const uint_fast16_t start, const uint_fast16_t stop, void* ctx) {
+	mapCache<T>* cacheMap = (mapCache<T> *) ctx;
+	return cacheFind<T>(cacheMap, bits, start, stop)->second;
+};
+
+template <typename T>
+inline bool cacheContains(const mapCache<T>* cacheMap, const uint_fast16_t l) {
+	return (cacheFind<T>(cacheMap, 0, l, cacheSize(l)) != cacheMap->end());
+}
+
+template <typename T>
+mapCache<T> cacheInitT(const uint_fast16_t min, const uint_fast16_t max) {
+	mapCache<T> cache;
+	T bits, nbits;
+	uint_fast16_t i, cl;
+	bientropy precalc, n_precalc;
+	if (min < 2 || max > sizeof(T) * CHAR_BIT)
+		return cache;
+
+	for (i = min; i <= max; ++i)
+	{ // precache various length
+
+		cl = cacheSize(i);
+		precalc = { 0, 0, 0 };
+		n_precalc = { 0, 0, 0 };
+
+		for (bits = 0; bits < (1UL << cl); bits += 2UL) //precache half of the variants
+		{
+			bienTtoStepT<T>(bits, &precalc, cl, 1, i - cl); //precache partial calculation
+			nbits = trim_bitsT<T>(~bits, cl);
+			bienTtoStepT<T>(nbits, &n_precalc, cl, 1, i - cl); //precache partial calculation for not
+
+			cache.insert(std::make_pair(Key<T>(bits, cl, i), precalc)); //insert main
+			if (n_precalc.bien != precalc.bien)
+				cache.insert(std::make_pair(Key<T>(nbits, cl, i), n_precalc));//insert mirror if unsimmetrical
+
+		}
+	}
+	return cache;
+}
+
+template <typename T>
+bientropy getBientropyT(const mapCache<T>* cache, T bits, const uint_fast16_t length) {
+	if (cache == NULL || !cacheContains<T>(cache, length))
+		return bienTs<T>(bits, length, 1);
+	else
+		return bienTcached<T>(bits, length, cacheSize(length), &cache_callback, (void*)cache); //using lookup table
+}
 
 
 

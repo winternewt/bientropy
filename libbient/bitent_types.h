@@ -1,6 +1,6 @@
+#pragma once
 #ifndef BITENT_TYPES_H
 #define BITENT_TYPES_H
-#pragma once
 
 /*
  * Copyright (c) 2021 Newton Winter
@@ -23,14 +23,51 @@
  * SOFTWARE.
  */
 
-static const uint_fast8_t CACHE_MAX_LENGTH = 16; //configure memory consumption
-typedef double FloatT; //precision choice
-typedef uint64_t Bits; //define bitstring
+#include <cstdint>
+#include <cstdlib>
+#include <climits>
+#include <map>
 
-struct bientropy {
-	FloatT bien; // BiEntropy
-	FloatT tbien; // TBiEntropy
-	FloatT t; //auxilary field, bitstring length
+static const uint_fast16_t CACHE_MAX_LENGTH = 20; //configure memory consumption
+typedef double FloatT; //precision choice
+typedef uint32_t Bits; //define bitstring
+
+typedef struct bientropy {
+    FloatT bien; // BiEntropy
+    FloatT tbien; // TBiEntropy
+    FloatT t; //auxilary field, bitstring length
+} bientropy;
+
+template<typename T>
+class Key
+{
+public:
+    Key(T bits, uint_fast8_t stop, uint_fast8_t start)
+    {
+        this->bits = bits;
+        this->stop = stop;
+        this->start = start;
+    }
+    T bits;
+    uint16_t stop;
+    uint16_t start;
+    bool operator<(const Key& k) const
+    {
+        if (this->bits == k.bits)
+        {
+            if (this->stop == k.stop)
+            {
+                return this->start < k.start;
+            }
+            return this->stop < k.stop;
+        }
+        return this->bits < k.bits;
+    }
 };
+
+template <typename T>
+using mapCache = std::map<Key<T>, bientropy>; // cache of precalculated bientopies
+template <typename T>
+using mapCacheIterator = typename mapCache<T>::const_iterator;
 
 #endif

@@ -1,7 +1,8 @@
+#pragma once
 #ifndef BITTWID_H
 #define BITTWID_H
-#pragma once
-
+#include <cstdint>
+#include <type_traits>
 /*
  * Copyright (c) 2021 Newton Winter
  * inplementation of bit twiddling hacks collected by Sean Eron Anderson © 1997-2005 https://graphics.stanford.edu/~seander/bithacks.html
@@ -24,9 +25,6 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
  * SOFTWARE.
  */
-
-#include <cstdint>
-#include <cstdlib>
 
  //todo: intrinsic checks
  // https://stackoverflow.com/questions/6121792/how-to-check-if-a-cpu-supports-the-sse3-instruction-set
@@ -115,7 +113,7 @@ static const uint_fast16_t MultiplyDeBruijnBitPosition64[64] = {
 };
 
 
-/************************** Bit Counting (population functions) **************************
+//************************** Bit Counting (population functions) **************************
 
 /*! @fn uint32_t pop_lookup(const char v)
  *  @brief      Counting bits set by lookup table 
@@ -229,12 +227,12 @@ static uint64_t inline clz(const uint64_t v) {
 #else
     uint64_t c = v;
     c |= (c >> powers2[0]);
-    c |= (c >> powers2[1));
+    c |= (c >> powers2[1]);
     c |= (c >> powers2[2]);
     c |= (c >> powers2[3]);
     c |= (c >> powers2[4]);
     c |= (c >> powers2[5]);
-    return powers2[6] - pop64(c);
+    return powers2[6] - pop(c);
 #endif
 }
 
@@ -287,10 +285,10 @@ inline uint32_t morton_lookup(const uint16_t x, const uint16_t y) { // gets the 
  *  @returns    16-bit Morton Number that can be compared easily and has the property that a number is usually close to another if their x and y values are close
  */
 inline uint16_t morton(const uint8_t x, const uint8_t y) { // gets the resulting 16-bit Morton Number.
-    return ((x * 0x0101010101010101ULL & 0x8040201008040201ULL) *
-        0x0102040810204081ULL >> 49) & 0x5555 |
-        ((y * 0x0101010101010101ULL & 0x8040201008040201ULL) *
-            0x0102040810204081ULL >> 48) & 0xAAAA;
+    return (((x * 0x0101010101010101ULL & 0x8040201008040201ULL) *
+        0x0102040810204081ULL >> 49) & 0x5555) | 
+        (((y * 0x0101010101010101ULL & 0x8040201008040201ULL) *
+            0x0102040810204081ULL >> 48) & 0xAAAA);
 }
 
 /*! @fn uint32_t log2(uint32_t v)
