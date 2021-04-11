@@ -1,13 +1,18 @@
 // test.cpp : This file contains the 'main' function. Program execution begins and ends there.
 //
+#ifdef _MSC_VER
+#define _CRT_SECURE_NO_WARNINGS
+#pragma warning(disable: 4996) 
+#endif
+
 #define TEST 
-#pragma warning(disable : 4996)
 #include <iostream>
 #include <time.h>
 #include <limits>
 #include <map>
 #include <chrono>
 #include <ctime>
+#include <atomic>
 #include <bientropy.h>
 
 typedef uint32_t TBits;
@@ -19,15 +24,29 @@ typedef std::map<uint32_t, uint32_t> mapDictionary; // cache of precalculated bi
 
 static constexpr FloatT eps = std::numeric_limits<FloatT>::epsilon();
 
+#ifdef __GNUC__
+
+template <class T>
+__attribute__((always_inline)) inline void DoNotOptimize(const T& value) {
+    asm volatile("" : "+m"(const_cast<T&>(value)));
+}
+#else
+template <class T>
+inline void DoNotOptimize(const T& value) {
+    _ReadWriteBarrier();
+}
+#endif
+
 inline bool mCount(mapDictionary& map, const FloatT val) {
-    uint32_t v = 1, 
+    uint32_t v = 1,
         key = round(val * 1e9); //round intended
     mapDictionary::iterator index = map.find(key);
     if (index == map.end()) {
         map.insert(std::make_pair(key, v));
-        return true; 
-    } else {
-        index->second+= 1;
+        return true;
+    }
+    else {
+        index->second += 1;
         return false;
     }
 };
@@ -45,7 +64,7 @@ inline void mStats(mapDictionary& map, bientropy& stats, const uint64_t c) { //h
     mapDictionary::reverse_iterator rit, rpr;
     v = 0;
     it = map.begin();
-    while (v < c/2) {
+    while (v < c / 2) {
         pr = it;
         v += it->second;
         it++;
@@ -66,7 +85,7 @@ inline void mStats(mapDictionary& map, bientropy& stats, const uint64_t c) { //h
 
 inline bool same(const FloatT a, const FloatT b)
 {
-    return std::fabs(a - b) < std::numeric_limits<FloatT>::epsilon()*1e3;
+    return std::fabs(a - b) < std::numeric_limits<FloatT>::epsilon() * 1e3;
 }
 
 void printBits(size_t const size, void const* const ptr)
@@ -84,32 +103,41 @@ void printBits(size_t const size, void const* const ptr)
 
 }
 
+static const uint_fast16_t cap = sizeof(Bits) * CHAR_BIT;
+
 int main()
 {
     std::cout << "Hello World!\n";
-    const uint_fast8_t cap = 21;
-    bool bench = true;
+
+    bool bench = false;
 
     std::cout.precision(std::numeric_limits<FloatT>::digits10);
-    
-    uint_fast8_t i , l = 8, cl = 8;
-    
+    uint_fast16_t l;
+    uint_fast16_t cl;
+
+
     duration time_span_full, time_span_cached, time_span_lookup, time_span;
     ts t1 = hclock::now();
-    mapCache<TBits> cache = cacheInitT<TBits>(2, cap);
+    auto lower = 2;
+    DoNotOptimize(lower);
+    mapCache<TBits> cache = cacheInitT<TBits>(lower, cap);
+    DoNotOptimize(cache);
     ts t2 = hclock::now();
     time_span_lookup = std::chrono::duration_cast<duration>(t2 - t1);
+    time_span_cached = time_span_lookup;
+    time_span_full = time_span_lookup;
     FloatT mul = 1.0;
     for (l = 2; l <= cap; l++) {
         auto time_point = std::chrono::system_clock::now();
         std::time_t now_c = std::chrono::system_clock::to_time_t(time_point); //dear god why, 3 lines of code to print now()
-        
+        volatile char bar = '+'; //prevent optimizing, o3 is hardcore
+        DoNotOptimize(bar);
         std::cout << "Now is " << std::ctime(&now_c);
         cl = cacheSize(l);
-       
-        bientropy precalc = { 0 };
-        bientropy n_precalc = { 0 };
-        uint64_t c,bl = (1ULL << l);
+
+        //        bientropy precalc = { 0,0,0 };
+        //        bientropy n_precalc = { 0,0,0 };
+        uint64_t c, bl = (1ULL << l);
 
         std::cout << "Bit length: " << (int)l << std::endl;
         std::cout << "Total variants: " << (uint64_t)bl << std::endl << std::endl;
@@ -119,17 +147,17 @@ int main()
         std::cout << "Cache size: " << (1ULL << cl) * (sizeof(bientropy) + sizeof(TBits) * 8) << " bytes." << std::endl;
         std::cout << "Cache formation: " << time_span_lookup.count() << " seconds." << std::endl;
         //std::cout << "Unsimmetrical bientropy, expecting 0: " << c << "\n"; //expecting 0
-        bientropy bi, bi2, w, g, ww, s, bis, tbis;
+        bientropy bi, bi2, w, g, s, bis, tbis;
         mapDictionary bid, tbid, twmi, twme;
         c = 0;
-        
+
         bis = { 0.,1., 0. };
         tbis = { 0.,1., 0. };
         w = { 0., 0., 1. };
         g = { 1., 1., 1. };
         s = { 0., 0., 0. };
         TBits i = 0;
-        while(i < bl) { //cache consistency
+        while (i < bl) { //cache consistency
             t1 = hclock::now();
             bi2 = getBientropyT<TBits>(&cache, i, l);  //using lookup table
             t2 = hclock::now();
@@ -137,19 +165,20 @@ int main()
             time_span_cached += time_span;
             if (bench) {
                 t1 = hclock::now();
-                bi = getBientropyT<TBits>(nullptr , i, l); //full
+                bi = getBientropyT<TBits>(nullptr, i, l); //full
                 t2 = hclock::now();
                 time_span = std::chrono::duration_cast<duration>(t2 - t1);
                 time_span_full += time_span;
-                mCount(bid, bi2.bien);                   
-                mCount(tbid, bi2.tbien);                    
+                mCount(bid, bi2.bien);
+                mCount(tbid, bi2.tbien);
                 if (!same(bi.bien, bi2.bien) || !same(bi.tbien, bi2.tbien)) {
                     c++;
                     printBits(sizeof(i), &i);
                     std::cout << " Bien: " << bi.bien << " TBien: " << bi.tbien;
                     std::cout << " BienC: " << bi2.bien << " TBienC: " << bi2.tbien << std::endl;;
                 }
-            } else {
+            }
+            else {
                 bi = bi2;
                 mStatsP(bient_median[l], bis, bi2.bien);
                 mStatsP(tbient_median[l], tbis, bi2.tbien);
@@ -159,39 +188,40 @@ int main()
             bis.t += tbienMeanWeight(bi2, l);
             tbis.t += tbienMedianWeight(bi2, l);
             //w.t *= tbienGeomeanWeight_(bi2, l);
-            w.bien  += bi.bien;
+            w.bien += bi.bien;
             w.tbien += bi.tbien;
             g.bien += (bi.bien == 0) ? logl(eps) : logl(bi.bien);
             g.tbien += (bi.tbien == 0) ? logl(eps) : logl(bi.tbien);
-            
-            if (i % (1+ (bl / 100)) == 0) {
-                std::cout << "+";
-              //  std::cout << bic << " " << tbic << std::endl;
+
+            if (i % (1 + (bl / 100)) == 0) {
+                printf("%c", '+');
             }
-            ++i;
-            if (i == 0) //overflow check!
+
+            if (++i == 0) //overflow check!
                 break;
         }
+
         if (!bench) {
             time_span_full = time_span_cached;
-        } else {
+        }
+        else {
             mStats(bid, bis, bl);
             mStats(bid, tbis, bl);
         }
         std::cout << std::endl;
-        mul *= (1 - c);
+        //mul *= (1 - c);
         std::cout << "Lookup mismatch: " << c << std::endl << std::endl; //expecting 0
         std::cout << "From scratch it took: " << time_span_full.count() << " seconds." << std::endl;
         std::cout << "Default troughput: " << (bl * l) / (CHAR_BIT * 1024.0 * time_span_full.count()) << " kbps." << std::endl;
         std::cout << "With cache it took: " << time_span_cached.count() << " seconds." << std::endl;
         std::cout << "Cached troughput: " << (bl * l) / (CHAR_BIT * 1024.0 * time_span_cached.count()) << " kbps." << std::endl;
-               
+
         std::cout << "Bi-entropy mean: " << std::fixed << w.bien / bl << " median: " << std::fixed << (bis.bien + bis.tbien) / 2 << " gmean: " << std::fixed << expl(g.bien / bl) / 2 << std::endl;
-        std::cout << "TBientropy mean: " << std::fixed << w.tbien /bl << " median: " << std::fixed << (tbis.bien + tbis.tbien) / 2 << " gmean: " << std::fixed << expl(g.tbien / bl) << std::endl;
+        std::cout << "TBientropy mean: " << std::fixed << w.tbien / bl << " median: " << std::fixed << (tbis.bien + tbis.tbien) / 2 << " gmean: " << std::fixed << expl(g.tbien / bl) << std::endl;
         //std::cout << "===========" << std::endl;
+        //mul *= bis.t / bl;
+        //std::cout << "TBWme muliplicate: " << std::fixed << w.t << std::endl;
         mStats(twme, s, bl);
-        std::cout << "TBWme muliplicate: " << std::fixed << w.t << std::endl;
-        mul *= bis.t / bl;
         std::cout << "TBWme mean: " << std::fixed << bis.t / bl << " median: " << std::fixed << (s.bien + s.tbien) / 2 << std::endl;
         mStats(twmi, s, bl);
         mul *= (s.bien + s.tbien) / 2;
@@ -199,10 +229,12 @@ int main()
         //std::cout << "===========" << std::endl;
         std::cout << std::endl;
     }
+    /*
     if (std::fabs(mul - 1.0) < 1e9)
         std::cout << "Test FAIL: " << mul <<  std::endl;
     else
         std::cout << "Test OK" << std::endl;
+    */
 }
 
 // Run program: Ctrl + F5 or Debug > Start Without Debugging menu
