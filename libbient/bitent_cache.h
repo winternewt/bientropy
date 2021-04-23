@@ -48,9 +48,6 @@ private:
 		return layers[length][idx / 2];
 	}
 
-	constexpr void __select(const ThinCacheNode<T>& node, bientropy& cache, const size_t k, const uint8_t c) const {
-		return 
-	}
 	template <CALC_SELECTOR S>
 	inline bientropy __get_bientropy(const T input, const uint_fast8_t length, const uint_fast8_t offset) const {
 		bientropy cache = {};
@@ -59,7 +56,7 @@ private:
 		for (size_t k = offset; k <= cl - BIENTROPY_MINLENGTH; ++k)
 		{
 			const ThinCacheNode<T> node = getNode(idx, cl - k);
-			one_or_both<S>(cache, node.eg, uint_fast8_t(k))
+			one_or_both<S>(cache, node.eg, uint_fast8_t(k));
 			idx = node.idx;
 		}
 		cache.t = std::copysign(idx % 2, (idx % 2) * 2.0 - 1.0); //-1 for 0 and +1 for 1
@@ -86,7 +83,7 @@ public:
 	uint_fast8_t size() const { return top; };
 
 	inline bientropy get_bientropy(const T input, const uint_fast8_t length, const uint_fast8_t offset) const {
-		return __get_bientropy<BOTH>(input, length, offset;
+		return __get_bientropy<BOTH>(input, length, offset);
 	}
 	inline FloatT get_bien(const T input, const uint_fast8_t length, const uint_fast8_t offset) const {
 		return __get_bientropy<BOTH>(input, length, offset);
@@ -107,8 +104,8 @@ public:
 
 inline bientropy catBTBien(const bientropy& product, const bientropy& cache, const uint_fast8_t length, const uint_fast8_t stop) { // last deriv stored in t sign
 	bientropy res = {};
-	res.bien = catBien(product.bien, cache.bien, length, stop);
-	res.tbien = catTBien(product.tbien, cache.tbien, length, stop);
+	res.bien = catBienS(product.bien, cache.bien, length, stop);
+	res.tbien = catTBienS(product.tbien, cache.tbien, length, stop);
 	res.t = std::copysign((FloatT)length, cache.t * product.t);
 	return res;
 }
@@ -132,7 +129,7 @@ template <typename T>
 constexpr bientropy getBientropyT(const ThinCache<T>* cache, T bits, const uint_fast8_t length) {
 	uint_fast8_t stop = getStop(cache, length);
 	bientropy product = {};
-	T deriv = getBientropyToStop(product, bits, length, stop);
+	T deriv = getBientropyToStop<T, BOTH>(product, bits, length, stop);
 	bientropy cache_product = getBientropyCached(cache, deriv, length, stop);
 	return catBTBien(product, cache_product, length, 1);
 }
