@@ -26,6 +26,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <limits.h>
+#include <assert.h>
 
 #ifdef __cplusplus
 #include <chrono>
@@ -174,14 +175,14 @@ inline size_t progressbar(const size_t begin, const size_t end_inc, const size_t
 	for (i = begin; itd>0 && i <= end_inc; i+=itd)
 	{
 		foo(i, i + itd-1, ctx);
-		printf("%c", '+');
+		printf("%c", bar);
 		if (++c >= bar_size) //owerflow failsafe
 			break;
 	}
 	foo(begin+itd*bar_size, end_inc, ctx);
 	for (; c < bar_size; c++)
 	{
-		printf("%c", '+');
+		printf("%c", bar);
 	}
 	printf("%c%c", ']','\n');
 	return itd * bar_size + it % bar_size;
@@ -240,8 +241,9 @@ unsigned char* getHEX(const unsigned long hexSize)
 		return NULL;
 	FILE* testFile = fopen(TEST_HEX_NAME, "r");
 	if (testFile != NULL) {
-		fread((void*)myHexString, sizeof(char), hexSize, testFile);
+		size_t res = fread((void*)myHexString, sizeof(char), hexSize, testFile);
 		fclose(testFile);
+		assert(res);
 	}
 	return myHexString;
 };

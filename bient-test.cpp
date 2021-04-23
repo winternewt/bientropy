@@ -76,10 +76,10 @@ static void small_cycle(const size_t begin, const size_t end, void* ctx) {
     {
     //    bi = getBientropyT<TBits>(context->cache,(i * 2), context->l);
         if (half > 0.5) {
-            bi = getOnlyTBientropyT<TBits>((i * 2), context->l);
-            // context->mean.bien += bi.bien * context->hbl;
+            bi = getBientropyT<TBits>((i * 2), context->l);
+            context->mean.bien += bi.bien * context->hbl;
             context->mean.tbien += bi.tbien * context->hbl;
-            //context->weight.tbien += tbienMeanWeight(bi, context->l) * context->hbl;
+            context->weight.tbien += tbienMeanWeight(bi, context->l) * context->hbl;
         }
         else {
             bi = getBientropyT<TBits>((i * 2), context->l);
@@ -95,8 +95,8 @@ static void small_cycle(const size_t begin, const size_t end, void* ctx) {
             
         }
         
-       //mCount(context->bim, bi.bien);
-       //mCount(context->tbim, bi.tbien);
+       mCount(context->bim, bi.bien);
+       mCount(context->tbim, bi.tbien);
        if (bi.t < 0)
            context->bc+=2;
         
@@ -116,7 +116,7 @@ inline duration calc(void* ctx) {
     return std::chrono::duration_cast<duration>(t2 - t1);
 }
 
-inline duration cache_init(ThinCache<TBits>*& cache, uint_fast16_t cap) {
+inline duration cache_init(ThinCache<TBits>*& cache) {
     ts t1 = hclock::now();
     auto lower = 2;
     DoNotOptimize(lower);
@@ -178,7 +178,6 @@ int main()
 //        bis = { 0.,1., 0. };
 //        tbis = { 0.,1., 0. };
 //        s = { 0., 0., 0. };
-        TBits i = 0;
         
         context.bim.reserve((1ULL << (l - 1))+1);
         context.tbim.reserve((1ULL << (l - 1)) + 1);

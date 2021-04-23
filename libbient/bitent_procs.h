@@ -59,6 +59,7 @@ constexpr void one_or_both(bientropy& cache, const FloatT eg, const uint_fast8_t
 	switch (S) {
 	case BOTH:
 		cache.tbien += eg * log2LUT[2U + k];
+		[[fallthrough]];
 	case BIEN:
 		cache.bien += eg * pow2LUT[k];
 		break;
@@ -68,6 +69,7 @@ constexpr void one_or_both(bientropy& cache, const FloatT eg, const uint_fast8_t
 	case PRECISION_BOTH:
 		cache.tbien = fma(eg, log2LUT[2U + k], cache.tbien);
 		cache.bien = fma(eg, pow2LUT[k], cache.bien);
+		[[fallthrough]];
 	default:
 		break;
 	};

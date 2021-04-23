@@ -29,8 +29,9 @@
  */
 
 namespace LUT {
-    // by Xeo, from https://stackoverflow.com/a/13294458/420683
-       
+#define UNUSED(x) (void)(x)
+
+    // by Xeo, from https://stackoverflow.com/a/13294458/420683      
     template<class Function, std::size_t... Indices>
     constexpr auto make_array_helper(Function f, std::index_sequence<Indices...>)
         ->std::array<typename std::result_of<Function(std::size_t, std::size_t)>::type, sizeof...(Indices)>
@@ -48,6 +49,7 @@ namespace LUT {
     template <typename T>
     constexpr T bitmask_gen(std::size_t curr, std::size_t total) // stackoverflow.com/questions/1392059/algorithm-to-generate-bit-mask 
     {
+      UNUSED(total);
       return (curr != 0)
           ? (static_cast<T>(-1) >> ((sizeof(T) * CHAR_BIT) - curr))
           : 0;
@@ -59,18 +61,21 @@ namespace LUT {
     template <typename T>
     constexpr T bitset_gen(std::size_t curr, std::size_t total)
     {
+	UNUSED(total);
         return (curr == 0) ? 0 : (curr & 1) + bitset_gen<T>(curr >> 1, total);
     }
 
     template <typename T>
     constexpr T powers2_gen(std::size_t curr, std::size_t total)
     {
+	UNUSED(total);
         return (1ULL << curr);
     }
     
     template <typename T>
     constexpr long double powers2f_gen(std::size_t curr, std::size_t total)
     {
+        UNUSED(total);
         return 2.0L* powers2_gen<T>(curr-1,total);
     }
 
@@ -78,6 +83,7 @@ namespace LUT {
     // c20 voodoo is fubar on msvc, so using lut//
     consteval long double log_gen(std::size_t curr, std::size_t total)
     {
+        UNUSED(total);
         return (curr == 0) ? 0 : std::log2l(curr);
     }
     constexpr auto lLog2 = generate_array<sizeof(int64_t)* CHAR_BIT * 2>(log_gen<T>);

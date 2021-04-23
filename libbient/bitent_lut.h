@@ -53,6 +53,7 @@ static_assert(log2LUT[128] == 7.0f, "lutfail");
 constexpr long double log_sum(std::size_t curr, std::size_t total)
 {
 	long double res = 0;
+	UNUSED(total);
 	for (auto i = BIENTROPY_MINLENGTH; i <= curr; i++)
 		res += log2LUT[i];
 	return res;
@@ -62,6 +63,7 @@ static constexpr auto stc = log2i(BIENTROPY_MAXLENGTH) + 1; // 6 for 32bit, 7 fo
 
 constexpr long double bien_egV(std::size_t curr, std::size_t total) { //precompute all we can
 	//const bitcomposition b = bien_egh(curr, total);
+	UNUSED(total);
 	uint_fast16_t ones = ((uint_fast16_t)curr & bitmaskLUT<size_t>(stc)); //lower stc bits store second dimension need stc
 	uint_fast16_t bits = 1 + (((uint_fast16_t)curr >> (stc)) & bitmaskLUT<size_t>(stc - 1)); //upper stc-1 bits store second dimension, n=0 is nosential, so [0..2^stc-1] variants
 	if (bits == 0 || ones > bits)
