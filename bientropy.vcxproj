@@ -150,10 +150,13 @@
     <ClCompile Include="bient-test.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="libbient\bientropy.h" />
+    <ClInclude Include="iohelper.h" />
+    <ClInclude Include="libbient\bitent_cache.h" />
+    <ClInclude Include="libbient\bitent_lut.h" />
     <ClInclude Include="libbient\bitent_procs.h" />
     <ClInclude Include="libbient\bitent_types.h" />
     <ClInclude Include="libbient\bittwid.h" />
+    <ClInclude Include="libbient\lutcraft.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

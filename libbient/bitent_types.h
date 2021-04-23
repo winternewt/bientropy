@@ -26,48 +26,23 @@
 #include <cstdint>
 #include <cstdlib>
 #include <climits>
-#include <map>
+#include <vector>
 
-static const uint_fast16_t CACHE_MAX_LENGTH = 20; //configure memory consumption
 typedef double FloatT; //precision choice
 typedef uint32_t Bits; //define bitstring
+
+static const uint_fast16_t BIENTROPY_MINLENGTH = 2; //it's defined for bit len >= 2
+static const uint_fast16_t BIENTROPY_MAXLENGTH = sizeof(Bits)*CHAR_BIT; //it's defined for bit len >= 2
+static const uint_fast16_t CACHE_MAX_LENGTH = 25; //configure memory consumption
+static const uint_fast16_t BITENT_STAT_LENGTH = 32;
 
 typedef struct bientropy {
     FloatT bien; // BiEntropy
     FloatT tbien; // TBiEntropy
-    FloatT t; //auxilary field, bitstring length
+    FloatT t; //auxilary field, bitstring length and sign for last binary derivative: - is 0 and + is 1
 } bientropy;
 
-template<typename T>
-class Key
-{
-public:
-    Key(T bits, uint_fast8_t stop, uint_fast8_t start)
-    {
-        this->bits = bits;
-        this->stop = stop;
-        this->start = start;
-    }
-    T bits;
-    uint16_t stop;
-    uint16_t start;
-    bool operator<(const Key& k) const
-    {
-        if (this->bits == k.bits)
-        {
-            if (this->stop == k.stop)
-            {
-                return this->start < k.start;
-            }
-            return this->stop < k.stop;
-        }
-        return this->bits < k.bits;
-    }
-};
-
 template <typename T>
-using mapCache = std::map<Key<T>, bientropy>; // cache of precalculated bientopies
-template <typename T>
-using mapCacheIterator = typename mapCache<T>::const_iterator;
+class ThinCache;
 
 #endif

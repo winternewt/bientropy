@@ -2,8 +2,12 @@
 #ifndef BITTWID_H
 #define BITTWID_H
 #include <cstdint>
+#include <climits>
+#include <cmath>
 #include <type_traits>
+#include <lutcraft.h>
 /*
+
  * Copyright (c) 2021 Newton Winter
  * inplementation of bit twiddling hacks collected by Sean Eron Anderson © 1997-2005 https://graphics.stanford.edu/~seander/bithacks.html
  * 
@@ -36,6 +40,9 @@
     #else
         #define IS32BIT
     #endif
+    #define bsw16(x) __builtin_bswap16(x)
+    #define bsw32(x) __builtin_bswap32(x)
+    #define bsw64(x) __builtin_bswap64(x)
 #endif
 #ifdef _MSC_VER
     #ifdef BUILT_IN
@@ -46,19 +53,86 @@
     #else
         #define IS32BIT
     #endif
+    #define bsw16(x) _byteswap_ushort(x)    
+    #define bsw32(x) _byteswap_ulong(x)
+    #define bsw64(x) _byteswap_uint64(x)
 #endif
 
-static const int powers2[] = { 1, 2, 4, 8, 16, 32, 64, 128, 256 }; 
-static const int binaryMagicNumbers[5] = { 0x55555555, 0x33333333, 0x0F0F0F0F, 0x00FF00FF, 0x0000FFFF }; // Magic Binary Numbers
-static const uint_fast8_t BitsSetTable256[256] = //On July 14, 2009 Hallvard Furuseth suggested the macro compacted table.
+#define BIT_MASK(__TYPE__, __ONE_COUNT__) ((__TYPE__) (-((__ONE_COUNT__) != 0))) & (((__TYPE__) -1) >> ((sizeof(__TYPE__) * CHAR_BIT) - (__ONE_COUNT__)))
+
+static const long double phi = 1.6180339887498948482045868343656381L; //golden ratio
+static constexpr int binaryMagicNumbers[5] = { 0x55555555, 0x33333333, 0x0F0F0F0F, 0x00FF00FF, 0x0000FFFF }; // Magic Binary Numbers
+
+#if CHAR_BIT != 8
+#error "unsupported char size"
+#endif
+
+enum
 {
-#   define B2(n) n,     n+1,     n+1,     n+2
-#   define B4(n) B2(n), B2(n+1), B2(n+1), B2(n+2)
-#   define B6(n) B4(n), B4(n+1), B4(n+1), B4(n+2)
-    B6(0), B6(1), B6(1), B6(2)
+    O32_LITTLE_ENDIAN = 0x03020100ul,
+    O32_BIG_ENDIAN = 0x00010203ul,
+    O32_PDP_ENDIAN = 0x01000302ul,      /* DEC PDP-11 (aka ENDIAN_LITTLE_WORD) */
+    O32_HONEYWELL_ENDIAN = 0x02030001ul /* Honeywell 316 (aka ENDIAN_BIG_WORD) */
 };
 
-static const uint_fast16_t MortonTable256[256] =
+static const union { unsigned char bytes[4]; uint32_t value; } o32_host_order =
+{ { 0, 1, 2, 3 } };
+
+#define O32_HOST_ORDER (o32_host_order.value)
+
+// https://stackoverflow.com/questions/19016099/lookup-table-with-constexpr
+
+// ([dcl.constexpr], §7.1.5/2 in the C++11 standard): "constexpr functions and constexpr constructors are implicitly inline (7.1.2)." 
+
+////////////////LUTGEN///////////////////////
+
+static constexpr auto masks16LUT = LUT::BitMasks<uint16_t>;
+static constexpr auto masks8LUT = LUT::BitMasks<uint8_t>;
+static constexpr auto masks64LUT = LUT::BitMasks<uint64_t>;
+static constexpr auto masks32LUT = LUT::BitMasks<uint32_t>;
+
+template <typename T>
+constexpr T bitmaskLUT(T x) {
+    if constexpr (std::is_same_v<T, uint64_t>) //compile-time choice for intrinsics
+        return masks64LUT[x];
+    else
+        if constexpr (std::is_same_v<T, uint32_t>) //compile-time choice for intrinsics
+            return masks32LUT[x];
+        else
+            if constexpr (std::is_same_v<T, uint16_t>) //compile-time choice for intrinsics
+                return masks16LUT[x];
+            else
+                if constexpr (std::is_same_v<T, uint8_t>) //compile-time choice for intrinsics
+                    return masks8LUT[x];
+                else
+                    return 0;
+}
+
+template <typename T> //same perf in the end
+constexpr T trim_bitsT(const T bits, const uint_fast16_t length) {
+    return bits & bitmaskLUT<T>(length);
+}
+
+static constexpr auto BitsSetTable256 = LUT::BitSet<uint8_t>;
+static constexpr auto powers2 = LUT::Powers2<uint16_t>;
+
+
+
+template <typename T>
+inline T bsw(T x) {
+    if constexpr (std::is_same_v<T, uint64_t>) //compile-time choice for intrinsics
+        return bsw64(x);
+    else
+        if constexpr (std::is_same_v<T, uint32_t>) //compile-time choice for intrinsics
+            return bsw32(x);
+        else
+            if constexpr (std::is_same_v<T, uint16_t>) //compile-time choice for intrinsics
+                return bsw16(x);
+            else
+                return x;
+}
+
+static constexpr uint_fast16_t MortonTable256[256] =
 {
   0x0000, 0x0001, 0x0004, 0x0005, 0x0010, 0x0011, 0x0014, 0x0015,
   0x0040, 0x0041, 0x0044, 0x0045, 0x0050, 0x0051, 0x0054, 0x0055,
@@ -95,13 +169,13 @@ static const uint_fast16_t MortonTable256[256] =
 };
 
 const uint64_t deBruijnMagic32 = 0x077CB531U;
-static const uint_fast16_t MultiplyDeBruijnBitPosition32[32] = {
+static constexpr uint_fast16_t MultiplyDeBruijnBitPosition32[32] = {
     0, 1, 28, 2, 29, 14, 24, 3, 30, 22, 20, 15, 25, 17, 4, 8,
     31, 27, 13, 23, 21, 19, 16, 7, 26, 12, 18, 6, 11, 5, 10, 9
 };
 
 const uint64_t deBruijnMagic64 = 0x03f79d71b4cb0a89U;
-static const uint_fast16_t MultiplyDeBruijnBitPosition64[64] = {
+static constexpr uint_fast16_t MultiplyDeBruijnBitPosition64[64] = {
     0,  1, 48,  2, 57, 49, 28,  3,
     61, 58, 50, 42, 38, 29, 17,  4,
     62, 55, 59, 36, 53, 51, 43, 22,
@@ -296,7 +370,7 @@ inline uint16_t morton(const uint8_t x, const uint8_t y) { // gets the resulting
  *  @param      v value
  *  @returns    log2(v) (rounded down)
  */
-inline uint32_t log2i(uint32_t v) {
+constexpr uint32_t log2i(uint32_t v) {
     v |= v >> powers2[0];
     v |= v >> powers2[1];
     v |= v >> powers2[2];
@@ -311,7 +385,7 @@ inline uint32_t log2i(uint32_t v) {
  *  @param      v value
  *  @returns    log2(v) (rounded down)
  */
-inline uint64_t log2i(uint64_t v) {
+constexpr uint64_t log2i(uint64_t v) {
     v |= v >> powers2[0];
     v |= v >> powers2[1];
     v |= v >> powers2[2];
@@ -379,6 +453,30 @@ void flipBits(T* a, const T mask, size_t n = 1) {
     for (size_t i = 0; i < n; ++i) {
         *a++ ^= mask;
     }
+}
+
+template <typename T>
+inline T trim_bitsC(const T bits, const uint_fast16_t length) {
+    T mask = (length < sizeof(T) * CHAR_BIT) ? BIT_MASK(T, length) : BIT_MASK(T, sizeof(T) * CHAR_BIT);
+    return bits & mask;
+}
+
+
+
+template <typename T>
+constexpr T nextLex(const T v) { // current permutation of bits 
+            
+#ifdef CROSSPLATFORM_INTRINSICS_FOR_CTZ
+    T t = v | (v - 1); // t gets v's least significant 0 bits set to 1
+    // Next set to 1 the most significant bit to change, 
+    // set to 0 the least significant ones, and add the necessary 1 bits.
+    T w = (t + 1) | (((~t & -~t) - 1) >> (ctz(v) + 1));
+    return 
+#endif
+    //Here is another version that tends to be slower because of its division operator, but it does not require counting the trailing zeros.
+    T t = (v | (v - 1)) + 1;
+    T w = t | ((((t & -t) / (v & -v)) >> 1) - 1);
+    return w; // next permutation of bits
 }
 
 

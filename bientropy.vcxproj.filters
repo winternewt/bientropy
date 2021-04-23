@@ -20,16 +20,25 @@
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="libbient\bientropy.h">
+    <ClInclude Include="libbient\bitent_types.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="libbient\bittwid.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="iohelper.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="libbient\bitent_lut.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="libbient\lutcraft.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="libbient\bitent_procs.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="libbient\bitent_types.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="libbient\bittwid.h">
+    <ClInclude Include="libbient\bitent_cache.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
